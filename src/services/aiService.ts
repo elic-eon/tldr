@@ -1,3 +1,8 @@
+import { StorageService } from './storageService';
+import { PostgresVectorStore } from './vectorStore';
+import { StoredDocument } from './types';
+import { ENV } from '../config/env';
+
 interface ThreadMessage {
   user: string;
   text: string;
@@ -5,6 +10,8 @@ interface ThreadMessage {
 }
 
 export class AIService {
+  private static storageService = new StorageService(new PostgresVectorStore());
+
   static async summarizeThread(threadTs: string, channelId: string): Promise<string> {
     try {
       // 1. Fetch all messages in the thread
@@ -26,15 +33,24 @@ export class AIService {
 
   static async getSuggestions(query: string, channelId: string): Promise<string> {
     try {
-      // 1. Fetch relevant message history
-      const relevantMessages = await this.fetchRelevantHistory(channelId, query);
+      let prompt = query;
+
+      if (ENV.ENABLE_RAG) {
+        // Only fetch and use context if RAG is enabled
+        const similarDocs = await this.storageService.searchSimilarMessages(query);
+        const context = this.formatContextForAI(similarDocs);
+        
+        prompt = `
+          Based on the following context:
+          ${context}
+          
+          Please provide suggestions for this query:
+          ${query}
+        `;
+      }
       
-      // 2. Format context for AI
-      const formattedContext = this.formatMessagesForAI(relevantMessages);
-      
-      // 3. Generate suggestions using AI
-      // TODO: Integrate with your preferred AI service
-      const suggestions = "Suggestions placeholder";
+      // TODO: Send to AI service
+      const suggestions = "AI-generated suggestions" + (ENV.ENABLE_RAG ? " with context" : "");
       
       return suggestions;
     } catch (error) {
@@ -43,14 +59,30 @@ export class AIService {
     }
   }
 
+  // Add method to store new messages - only if RAG is enabled
+  static async storeNewMessage(message: {
+    id: string;
+    text: string;
+    channelId: string;
+    threadTs?: string;
+    user: string;
+    timestamp: string;
+  }): Promise<void> {
+    if (ENV.ENABLE_RAG) {
+      await this.storageService.storeMessage(message);
+    }
+  }
+
   private static async fetchThreadMessages(threadTs: string, channelId: string): Promise<ThreadMessage[]> {
     // TODO: Implement thread message fetching using Slack API
     return [];
   }
 
-  private static async fetchRelevantHistory(channelId: string, query: string): Promise<ThreadMessage[]> {
-    // TODO: Implement relevant message history fetching
-    return [];
+  private static formatContextForAI(documents: StoredDocument[]): string {
+    return documents
+      .map(doc => `Message from ${doc.metadata.user} at ${doc.metadata.timestamp}:
+        ${doc.pageContent}`)
+      .join('\n\n');
   }
 
   private static formatMessagesForAI(messages: ThreadMessage[]): string {
