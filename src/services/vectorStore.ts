@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { StoredDocument, EmbeddingVector, VectorStore } from './types';
 import { OpenAIEmbeddings } from './embeddings';
+import { ENV } from '../config/env';
 
 export class PostgresVectorStore implements VectorStore {
   private pool: Pool;
@@ -8,7 +9,11 @@ export class PostgresVectorStore implements VectorStore {
 
   constructor() {
     this.pool = new Pool({
-      // Your PostgreSQL configuration
+      host: ENV.POSTGRES_HOST,
+      port: ENV.POSTGRES_PORT,
+      database: ENV.POSTGRES_DB,
+      user: ENV.POSTGRES_USER,
+      password: ENV.POSTGRES_PASSWORD,
     });
     this.embeddings = new OpenAIEmbeddings();
   }

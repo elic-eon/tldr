@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyIncomingRequest } from '../slackVerification';
+import { verifyIncomingRequest } from './slackVerification';
 import * as SlackBolt from '@slack/bolt';
 
 describe('Slack Verification Middleware', () => {
