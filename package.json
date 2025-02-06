@@ -15,10 +15,13 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
+    "@types/jest": "^29.5.14",
     "@types/node": "^22.13.1",
     "@types/pg": "^8.11.11",
+    "jest": "^29.7.0",
     "ngrok": "^5.0.0-beta.2",
     "nodemon": "^3.1.9",
+    "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   },
@@ -27,6 +30,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "tunnel": "ngrok http 3000",
-    "ngork": "ngrok"
+    "ngork": "ngrok",
+    "test": "jest",
+    "test:watch": "jest --watch"
   }
 }
