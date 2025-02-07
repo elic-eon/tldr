@@ -1,18 +1,14 @@
 import { MessageEvent, AppMentionEvent } from '@slack/web-api';
-import { WebClient } from '@slack/web-api';
-import { ENV } from '../config/env';
-import { AIService } from './aiService';
+import { AssistantService } from './assistantService';
 import Container, { Service } from "typedi";
 import { SlackService } from './slackService';
 
 @Service()
 export class MessageService {
-    private aiService: AIService = Container.get(AIService);
+    private assistantService: AssistantService = Container.get(AssistantService);
     private slackService: SlackService = Container.get(SlackService);
 
   async handleMessage(event: MessageEvent) {
-    console.log('Received message:', event);
-
     try {
       // Handle regular messages
       if ('text' in event) {
@@ -43,7 +39,7 @@ export class MessageService {
   private async handleSummarizeRequest(event: AppMentionEvent) {
     try {
       const threadTs = event.thread_ts || event.ts;
-      const summary = await this.aiService.summarizeThread(threadTs, event.channel);
+      const summary = await this.assistantService.summarizeThread(threadTs, event.channel);
       await this.slackService.sendMessage(event.channel, summary, threadTs);
     } catch (error) {
       console.error('Error handling summarize request:', error);
@@ -54,7 +50,7 @@ export class MessageService {
   private async handleSuggestionRequest(event: AppMentionEvent) {
     try {
       const query = event.text.replace(/<@[^>]+>/g, '').trim();
-      const suggestions = await this.aiService.getSuggestions(query, event.channel, event.thread_ts || event.ts);
+      const suggestions = await this.assistantService.getSuggestions(query, event.channel, event.thread_ts || event.ts);
       
       await this.slackService.sendMessage(event.channel, suggestions, event.thread_ts || event.ts);
     } catch (error) {

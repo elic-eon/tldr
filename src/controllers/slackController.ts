@@ -24,7 +24,6 @@ export class SlackController {
   }
 
   private static async routeEvent(event: MessageEvent | AppMentionEvent | { type: string }) {
-    console.log('Routing event:', event);
     switch (event.type) {
       case 'message':
         await this.messageService.handleMessage(event as MessageEvent);

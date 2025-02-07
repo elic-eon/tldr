@@ -5,11 +5,13 @@ import { ENV } from '../config/env';
 import { ThreadMessage } from './types';
 import Container, { Service } from "typedi";
 import { SlackService } from './slackService';
+import { OpenAIService } from './openaiService';
 
 @Service()
-export class AIService {
+export class AssistantService {
     private storageService: StorageService = Container.get(StorageService);
     private slackService: SlackService = Container.get(SlackService);
+    private openaiService: OpenAIService = Container.get(OpenAIService);
 
   async summarizeThread(threadTs: string, channelId: string): Promise<string> {
     try {
@@ -21,9 +23,10 @@ export class AIService {
 
       console.log('Formatted thread:', formattedThread);
       
-      // 3. Generate summary using AI
-      // TODO: Integrate with your preferred AI service (OpenAI, Claude, etc.)
-      const summary = "Thread summary placeholder";
+      // 3. Generate summary using OpenAI
+      const summary = await this.openaiService.getSummary(formattedThread);
+
+      console.log('Summary:', summary);
       
       return summary;
     } catch (error) {
@@ -100,7 +103,8 @@ export class AIService {
     return messages
       .map((msg, index) => {
         const isFirstMessage = index === 0 ? '[THREAD START] ' : '';
-        return `${isFirstMessage}User ${msg.user} (${msg.timestamp}):
+        // Format user mentions consistently with Slack's format
+        return `${isFirstMessage}<@${msg.user}> (${msg.timestamp}):
 ${msg.text}`;
       })
       .join('\n\n');

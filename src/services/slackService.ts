@@ -45,9 +45,7 @@ export class SlackService {
 
       return result.messages
         .filter(message => 
-          // Exclude bot messages
           message.user !== this.botUserId && 
-          // Exclude commands specifically to our bot
           !(message.text || '').match(botCommandRegex)
         )
         .map(message => ({
