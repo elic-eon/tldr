@@ -21,13 +21,9 @@ export class AssistantService {
       // 2. Format messages for summarization
       const formattedThread = this.formatMessagesForAI(messages);
 
-      console.log('Formatted thread:', formattedThread);
-      
       // 3. Generate summary using OpenAI
       const summary = await this.openaiService.getSummary(formattedThread);
 
-      console.log('Summary:', summary);
-      
       return summary;
     } catch (error) {
       console.error('Error summarizing thread:', error);
@@ -37,37 +33,37 @@ export class AssistantService {
 
   async getSuggestions(query: string, channelId: string, threadTs: string): Promise<string> {
     try {
-      let prompt = query;
+      let contextMessages: ThreadMessage[] = [];
+      
+      // Get current thread messages
+      const threadMessages = await this.fetchThreadMessages(threadTs, channelId);
+      contextMessages.push(...threadMessages);
+
+      // Get recent messages and their threads
+      const recentMessages = await this.slackService.getRecentMessagesAndThreads(channelId);
+      contextMessages.push(...recentMessages);
+
+      let formattedContext = '';
 
       if (ENV.ENABLE_RAG) {
-        // Only fetch and use context if RAG is enabled
+        // Use both vector search and message context
         const similarDocs = await this.storageService.searchSimilarMessages(query);
-        const context = this.formatContextForAI(similarDocs);
+        const vectorContext = this.formatContextForAI(similarDocs);
+        const messageContext = this.formatMessagesForAI(contextMessages);
         
-        prompt = `
-          Based on the following context:
-          ${context}
-          
-          Please provide suggestions for this query:
-          ${query}
-        `;
-      }
-      else {
-        // Fetch thread messages if RAG is not enabled
-        const messages = await this.fetchThreadMessages(threadTs, channelId);
-        const formattedThread = this.formatMessagesForAI(messages);
+        formattedContext = `
+Recent conversations:
+${messageContext}
 
-        // If RAG is not enabled, use the query as the prompt
-        prompt = `
-          Please provide suggestions for this query:
-          ${query}
-        `;
+Similar past messages:
+${vectorContext}`;
+      } else {
+        // Use only message context
+        formattedContext = this.formatMessagesForAI(contextMessages);
       }
       
-      // TODO: Send to AI service
-      const suggestions = "AI-generated suggestions" + (ENV.ENABLE_RAG ? " with context" : "");
-      
-      return suggestions;
+      // Get suggestions from OpenAI
+      return await this.openaiService.getSuggestions(formattedContext, query);
     } catch (error) {
       console.error('Error generating suggestions:', error);
       throw error;

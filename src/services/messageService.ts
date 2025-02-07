@@ -48,8 +48,11 @@ export class MessageService {
   }
 
   private async handleSuggestionRequest(event: AppMentionEvent) {
+    console.log('Received suggestion request:', event.text);
+
     try {
-      const query = event.text.replace(/<@[^>]+>/g, '').trim();
+      // input is <@bot_id> suggest <query>
+      const query = event.text.replace(/<@[^>]+> suggest /g, '').trim();
       const suggestions = await this.assistantService.getSuggestions(query, event.channel, event.thread_ts || event.ts);
       
       await this.slackService.sendMessage(event.channel, suggestions, event.thread_ts || event.ts);

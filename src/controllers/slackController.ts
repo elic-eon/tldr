@@ -12,15 +12,20 @@ export class SlackController {
     // Handle URL verification
     if (type === 'url_verification') {
       res.json({ challenge });
+      return;
     }
 
-    // Handle events
-    if (type === 'event_callback') {
-      await SlackController.routeEvent(event);
-    }
-
-    // Acknowledge receipt of the event
+    // Acknowledge receipt of the event immediately
     res.status(200).send('OK');
+
+    // Process events after sending response
+    if (type === 'event_callback') {
+      try {
+        await SlackController.routeEvent(event);
+      } catch (error) {
+        console.error('Error processing event:', error);
+      }
+    }
   }
 
   private static async routeEvent(event: MessageEvent | AppMentionEvent | { type: string }) {

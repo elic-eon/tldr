@@ -58,4 +58,46 @@ export class SlackService {
       throw new Error('Failed to fetch thread messages');
     }
   }
+
+  async getRecentMessagesAndThreads(channelId: string): Promise<ThreadMessage[]> {
+    try {
+      // Get recent messages
+      const result = await this.slackClient.conversations.history({
+        channel: channelId,
+        oldest: (Date.now() / 1000 - 86400 * 3).toString(), // 3 days ago
+        inclusive: true,
+      });
+
+      
+      if (!result.messages) {
+        return [];
+      }
+
+      const botCommandRegex = new RegExp(`<@${this.botUserId}>\\s*(summarize|suggest)`, 'i');
+      const messages: ThreadMessage[] = [];
+
+      // Process each message and its thread if exists
+      for (const message of result.messages) {
+        if (message.user === this.botUserId) continue;
+        if (message.text && message.text.match(botCommandRegex)) continue;
+
+        messages.push({
+          user: message.user || 'unknown',
+          text: message.text || '',
+          timestamp: message.ts || ''
+        });
+
+        // If message has replies, fetch them
+        if (message.thread_ts) {
+          const threadReplies = await this.getThreadReplies(channelId, message.thread_ts);
+          messages.push(...threadReplies);
+        }
+      }
+
+      return messages;
+    } catch (error) {
+      console.error('Error fetching recent messages:', error);
+      throw new Error('Failed to fetch recent messages');
+    }
+  }
 } 
