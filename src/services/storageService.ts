@@ -1,10 +1,12 @@
 import { StoredDocument } from './types';
+import { Service } from 'typedi';
 
 export interface VectorStore {
   addDocuments(documents: StoredDocument[]): Promise<void>;
   similaritySearch(query: string, k?: number): Promise<StoredDocument[]>;
 }
 
+@Service()
 export class StorageService {
   private vectorStore: VectorStore;
   

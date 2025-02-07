@@ -2,7 +2,9 @@ import { Pool } from 'pg';
 import { StoredDocument, EmbeddingVector, VectorStore } from './types';
 import { OpenAIEmbeddings } from './embeddings';
 import { ENV } from '../config/env';
+import { Service } from 'typedi';
 
+@Service()
 export class PostgresVectorStore implements VectorStore {
   private pool: Pool;
   private embeddings: OpenAIEmbeddings;

@@ -2,11 +2,15 @@ import { MessageEvent, AppMentionEvent } from '@slack/web-api';
 import { WebClient } from '@slack/web-api';
 import { ENV } from '../config/env';
 import { AIService } from './aiService';
+import Container, { Service } from "typedi";
+import { SlackService } from './slackService';
 
-const slack = new WebClient(ENV.SLACK_BOT_TOKEN);
-
+@Service()
 export class MessageService {
-  static async handleMessage(event: MessageEvent) {
+    private aiService: AIService = Container.get(AIService);
+    private slackService: SlackService = Container.get(SlackService);
+
+  async handleMessage(event: MessageEvent) {
     console.log('Received message:', event);
 
     try {
@@ -19,7 +23,7 @@ export class MessageService {
     }
   }
 
-  static async handleAppMention(event: AppMentionEvent) {
+  async handleAppMention(event: AppMentionEvent) {
     try {
       const text = event.text.toLowerCase();
       
@@ -36,47 +40,30 @@ export class MessageService {
     }
   }
 
-  private static async handleSummarizeRequest(event: AppMentionEvent) {
+  private async handleSummarizeRequest(event: AppMentionEvent) {
     try {
-      // Check if the mention is in a thread
       const threadTs = event.thread_ts || event.ts;
-      
-      // Get summary
-      const summary = await AIService.summarizeThread(threadTs, event.channel);
-      
-      // Send response
-      await slack.chat.postMessage({
-        channel: event.channel,
-        text: summary,
-        thread_ts: threadTs,
-      });
+      const summary = await this.aiService.summarizeThread(threadTs, event.channel);
+      await this.slackService.sendMessage(event.channel, summary, threadTs);
     } catch (error) {
       console.error('Error handling summarize request:', error);
       throw error;
     }
   }
 
-  private static async handleSuggestionRequest(event: AppMentionEvent) {
+  private async handleSuggestionRequest(event: AppMentionEvent) {
     try {
-      // Extract query from message
       const query = event.text.replace(/<@[^>]+>/g, '').trim();
+      const suggestions = await this.aiService.getSuggestions(query, event.channel, event.thread_ts || event.ts);
       
-      // Get suggestions
-      const suggestions = await AIService.getSuggestions(query, event.channel);
-      
-      // Send response
-      await slack.chat.postMessage({
-        channel: event.channel,
-        text: suggestions,
-        thread_ts: event.thread_ts || event.ts,
-      });
+      await this.slackService.sendMessage(event.channel, suggestions, event.thread_ts || event.ts);
     } catch (error) {
       console.error('Error handling suggestion request:', error);
       throw error;
     }
   }
 
-  private static async sendHelpMessage(event: AppMentionEvent) {
+  private async sendHelpMessage(event: AppMentionEvent) {
     const helpText = `
 Hello! I can help you with:
 • Summarizing threads - Just mention me with "summarize" in a thread
@@ -87,18 +74,10 @@ Examples:
 @YourBot suggest how to handle this customer request?
     `.trim();
 
-    await slack.chat.postMessage({
-      channel: event.channel,
-      text: helpText,
-      thread_ts: event.thread_ts || event.ts,
-    });
+    await this.slackService.sendMessage(event.channel, helpText, event.thread_ts || event.ts);
   }
 
-  private static async sendErrorMessage(event: AppMentionEvent) {
-    await slack.chat.postMessage({
-      channel: event.channel,
-      text: "Sorry, I encountered an error processing your request. Please try again.",
-      thread_ts: event.thread_ts || event.ts,
-    });
+  private async sendErrorMessage(event: AppMentionEvent) {
+    await this.slackService.sendMessage(event.channel, "Sorry, I encountered an error processing your request. Please try again.", event.thread_ts || event.ts);
   }
 } 

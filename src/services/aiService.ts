@@ -2,23 +2,24 @@ import { StorageService } from './storageService';
 import { PostgresVectorStore } from './vectorStore';
 import { StoredDocument } from './types';
 import { ENV } from '../config/env';
+import { ThreadMessage } from './types';
+import Container, { Service } from "typedi";
+import { SlackService } from './slackService';
 
-interface ThreadMessage {
-  user: string;
-  text: string;
-  timestamp: string;
-}
-
+@Service()
 export class AIService {
-  private static storageService = new StorageService(new PostgresVectorStore());
+    private storageService: StorageService = Container.get(StorageService);
+    private slackService: SlackService = Container.get(SlackService);
 
-  static async summarizeThread(threadTs: string, channelId: string): Promise<string> {
+  async summarizeThread(threadTs: string, channelId: string): Promise<string> {
     try {
       // 1. Fetch all messages in the thread
       const messages = await this.fetchThreadMessages(threadTs, channelId);
       
       // 2. Format messages for summarization
       const formattedThread = this.formatMessagesForAI(messages);
+
+      console.log('Formatted thread:', formattedThread);
       
       // 3. Generate summary using AI
       // TODO: Integrate with your preferred AI service (OpenAI, Claude, etc.)
@@ -31,7 +32,7 @@ export class AIService {
     }
   }
 
-  static async getSuggestions(query: string, channelId: string): Promise<string> {
+  async getSuggestions(query: string, channelId: string, threadTs: string): Promise<string> {
     try {
       let prompt = query;
 
@@ -48,6 +49,17 @@ export class AIService {
           ${query}
         `;
       }
+      else {
+        // Fetch thread messages if RAG is not enabled
+        const messages = await this.fetchThreadMessages(threadTs, channelId);
+        const formattedThread = this.formatMessagesForAI(messages);
+
+        // If RAG is not enabled, use the query as the prompt
+        prompt = `
+          Please provide suggestions for this query:
+          ${query}
+        `;
+      }
       
       // TODO: Send to AI service
       const suggestions = "AI-generated suggestions" + (ENV.ENABLE_RAG ? " with context" : "");
@@ -60,7 +72,7 @@ export class AIService {
   }
 
   // Add method to store new messages - only if RAG is enabled
-  static async storeNewMessage(message: {
+  async storeNewMessage(message: {
     id: string;
     text: string;
     channelId: string;
@@ -73,20 +85,24 @@ export class AIService {
     }
   }
 
-  private static async fetchThreadMessages(threadTs: string, channelId: string): Promise<ThreadMessage[]> {
-    // TODO: Implement thread message fetching using Slack API
-    return [];
+  private async fetchThreadMessages(threadTs: string, channelId: string): Promise<ThreadMessage[]> {
+    return this.slackService.getThreadReplies(channelId, threadTs);
   }
 
-  private static formatContextForAI(documents: StoredDocument[]): string {
+  private formatContextForAI(documents: StoredDocument[]): string {
     return documents
       .map(doc => `Message from ${doc.metadata.user} at ${doc.metadata.timestamp}:
         ${doc.pageContent}`)
       .join('\n\n');
   }
 
-  private static formatMessagesForAI(messages: ThreadMessage[]): string {
-    // TODO: Implement message formatting for AI input
-    return '';
+  private formatMessagesForAI(messages: ThreadMessage[]): string {
+    return messages
+      .map((msg, index) => {
+        const isFirstMessage = index === 0 ? '[THREAD START] ' : '';
+        return `${isFirstMessage}User ${msg.user} (${msg.timestamp}):
+${msg.text}`;
+      })
+      .join('\n\n');
   }
 } 

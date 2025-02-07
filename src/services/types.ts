@@ -13,4 +13,10 @@ export interface VectorStore {
 export interface SearchResult {
   document: StoredDocument;
   score: number;
+}
+
+export interface ThreadMessage {
+  user: string;
+  text: string;
+  timestamp: string;
 } 

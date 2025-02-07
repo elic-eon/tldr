@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import express from 'express';
 import slackRoutes from './routes/slackRoutes';
 import { ENV } from './config/env';

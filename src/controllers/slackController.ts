@@ -1,8 +1,11 @@
 import { Request, Response } from 'express';
 import { MessageEvent, AppMentionEvent } from '@slack/web-api';
+import { Container } from "typedi";
 import { MessageService } from '../services/messageService';
 
 export class SlackController {
+  private static messageService = Container.get(MessageService);
+
   static async handleEvent(req: Request, res: Response): Promise<void> {
     const { type, event, challenge } = req.body;
 
@@ -24,10 +27,10 @@ export class SlackController {
     console.log('Routing event:', event);
     switch (event.type) {
       case 'message':
-        await MessageService.handleMessage(event as MessageEvent);
+        await this.messageService.handleMessage(event as MessageEvent);
         break;
       case 'app_mention':
-        await MessageService.handleAppMention(event as AppMentionEvent);
+        await this.messageService.handleAppMention(event as AppMentionEvent);
         break;
       default: {
         console.log(`Unhandled event type: ${event.type}`);
