@@ -1,8 +1,8 @@
-# Take Home Assignment
+# TL;DR Slack App
 
 ## Overview
 
-A simple API that serve as slack application backend.
+A simple API that serve as slack application backend. It uses OpenAI API to generate summaries and suggestions based on the conversation history.
 
 ## Technologies Used
 
@@ -14,7 +14,7 @@ A simple API that serve as slack application backend.
 ## Setup
 
 1. Clone the repository and install dependencies
-2. Start the server
+2. Start the server using `yarn dev`
 3. Set up ngrok:
    - Run `ngrok http 3000`
    - Copy the generated ngrok URL
@@ -31,10 +31,8 @@ A simple API that serve as slack application backend.
 ## Usage
 
 1. Select the conversation you want to use the app in
-2. Click on the app icon
-3. Click on `Ask AI`
-4. Type your question
-5. Click on `Send`
+2. `@tldr summarize` in the conversation to get the summary of the conversation
+3. `@tldr suggest <query>` in the conversation to get the suggestions for the query
 
 # Development
 
@@ -52,25 +50,16 @@ A simple API that serve as slack application backend.
    - `SLACK_BOT_TOKEN`
    - `SLACK_SIGNING_SECRET`
    - `SLACK_APP_TOKEN`
+   - `OPENAI_API_KEY`
+   - `PORT`
 
 4. **Development Tools Setup**
    ```bash
-   npm install -g nodemon
-   npm install -g ngrok
+   yarn
    ```
 
-5. **Start Development Server**
-   ```bash
-   # Terminal 1: Start the development server
-   npm run dev
-
-   # Terminal 2: Start ngrok tunnel
-   ngrok http 3000
-
-
-8. **Verify Setup**
+5. **Verify Setup**
    - Server should be running on `http://localhost:3000`
-   - ngrok should provide a public URL
    - Slack events should be received and logged
 
 ## Slack App Setup
